@@ -9,7 +9,12 @@
 {% block page_header %}
     <div class="container header-container">
         <div class="row">
-            <div class="col"></div>
+            <div class="col">
+                {{stripe_public_key}}
+                <br>
+                {{client_secret}}
+                {{ intent }}
+            </div>
         </div>
     </div>
 {% endblock %}
