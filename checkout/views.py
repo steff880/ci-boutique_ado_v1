@@ -79,9 +79,6 @@ def checkout(request):
             amount=stripe_total,
             currency=settings.STRIPE_CURRENCY
         )
-        print(intent)
-        print(current_bag)
-        print(stripe.api_key)
 
         order_form = OrderForm()
 
