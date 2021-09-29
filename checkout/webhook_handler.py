@@ -2,16 +2,17 @@ from django.http import HttpResponse
 
 from .models import Order, OrderLineItem
 from products.models import Product
+from profiles.models import UserProfile
 
 import json
 import time
 
+
 class StripeWH_Handler:
     """ Handle Stripe webhooks """
 
-    def __init__(self,request):
+    def __init__(self, request):
         self.request = request
-
 
     def handle_event(self, event):
         """
@@ -20,7 +21,6 @@ class StripeWH_Handler:
         return HttpResponse(
             content=f'Webhook received: {event["type"]}',
             status=200)
-
 
     def handle_payment_intent_succeeded(self, event):
         """
@@ -41,12 +41,28 @@ class StripeWH_Handler:
             if value == '':
                 shipping_details.address[field] = None
 
+        # Update profile information if save_ingo was checked
+        profile = None
+        username = intent.metadata.username
+        if username != "AnonymousUser":
+            profile = UserProfile.objects.get(user__username=username)
+            if save_info:
+                profile.default_phone_number = shipping_details.phone
+                profile.default_country = shipping_details.address.country
+                profile.default_postcode = shipping_details.address.postal_code
+                profile.default_town_or_city = shipping_details.address.city
+                profile.default_street_address1 = shipping_details.address.line1
+                profile.default_street_address2 = shipping_details.address.line2
+                profile.default_county = shipping_details.address.state
+                profile.save()
+
         order_exists = False
         attempt = 1
         while attempt <= 5:
             try:
                 order = Order.objects.get(
                     full_name__iexact=shipping_details.name,
+                    user_profile=profile,
                     email__iexact=billing_details.email,
                     phone_number__iexact=shipping_details.phone,
                     country__iexact=shipping_details.address.country,
@@ -112,7 +128,6 @@ class StripeWH_Handler:
         return HttpResponse(
             content=f'Webhook received: {event["type"]} | SUCCESS: Created order in webhook',
             status=200)
-
 
     def handle_payment_intent_payment_failed(self, event):
         """
